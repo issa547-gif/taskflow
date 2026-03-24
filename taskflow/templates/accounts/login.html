@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Sign In — TaskFlow{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+
+{% block content %}
+<div class="auth-layout">
+
+  <!-- Left panel -->
+  <aside class="auth-panel">
+    <div class="auth-panel-logo">Task<span>Flow</span></div>
+    <h1 class="auth-panel-tagline">
+      Work that<br><em>stays organised.</em>
+    </h1>
+    <p class="auth-panel-sub">
+      A focused task manager built for individuals who want clarity without noise.
+    </p>
+    <div class="auth-features">
+      <div class="auth-feature"><span class="auth-feature-dot"></span>Priorities and due dates at a glance</div>
+      <div class="auth-feature"><span class="auth-feature-dot"></span>Filter by status, pin what matters</div>
+      <div class="auth-feature"><span class="auth-feature-dot"></span>Secure — your tasks, only yours</div>
+    </div>
+  </aside>
+
+  <!-- Right form -->
+  <main class="auth-form-side">
+    <div class="auth-card">
+      <div class="auth-card-header">
+        <h2 class="auth-card-title">Welcome back</h2>
+        <p class="auth-card-sub">Sign in to continue to your workspace</p>
+      </div>
+
+      <form id="loginForm" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="email">Email address</label>
+          <input class="form-input" type="email" id="email" name="email"
+                 placeholder="you@example.com" required autocomplete="email" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <input class="form-input" type="password" id="password" name="password"
+                 placeholder="••••••••" required autocomplete="current-password" />
+        </div>
+
+        <div class="mt-2">
+          <button class="btn btn-primary btn-lg" type="submit" id="loginBtn">
+            <span class="btn-text">Sign in</span>
+          </button>
+        </div>
+      </form>
+
+      <div class="divider">or</div>
+
+      <p class="text-center" style="font-size:0.9rem; color: var(--text-muted);">
+        Don't have an account?
+        <a href="/register/">Create one free</a>
+      </p>
+    </div>
+  </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Redirect if already logged in
+  if (API.isLoggedIn()) window.location.href = '/tasks/';
+
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const btn  = document.getElementById('loginBtn');
+
+    FormHelper.clearErrors(form);
+    FormHelper.setLoading(btn, true);
+
+    const email    = form.email.value.trim();
+    const password = form.password.value;
+
+    try {
+      await API.auth.login(email, password);
+      Toast.success('Welcome back!');
+      setTimeout(() => window.location.href = '/tasks/', 400);
+    } catch (err) {
+      const errors = err.data || {};
+      if (errors.detail) {
+        Toast.error(errors.detail);
+      } else {
+        FormHelper.showErrors(form, errors);
+      }
+    } finally {
+      FormHelper.setLoading(btn, false);
+    }
+  });
+</script>
+{% endblock %}

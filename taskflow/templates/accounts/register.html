@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Create Account — TaskFlow{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+
+{% block content %}
+<div class="auth-layout">
+
+  <!-- Left panel -->
+  <aside class="auth-panel">
+    <div class="auth-panel-logo">Task<span>Flow</span></div>
+    <h1 class="auth-panel-tagline">
+      Start organised.<br><em>Stay that way.</em>
+    </h1>
+    <p class="auth-panel-sub">
+      Create your free account in seconds. No credit card, no nonsense.
+    </p>
+    <div class="auth-features">
+      <div class="auth-feature"><span class="auth-feature-dot"></span>Unlimited tasks, always free</div>
+      <div class="auth-feature"><span class="auth-feature-dot"></span>JWT-secured — industry-standard auth</div>
+      <div class="auth-feature"><span class="auth-feature-dot"></span>Privacy-first — your data is yours</div>
+    </div>
+  </aside>
+
+  <!-- Right form -->
+  <main class="auth-form-side">
+    <div class="auth-card">
+      <div class="auth-card-header">
+        <h2 class="auth-card-title">Create account</h2>
+        <p class="auth-card-sub">Get started with your free workspace</p>
+      </div>
+
+      <form id="registerForm" novalidate>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="first_name">First name</label>
+            <input class="form-input" type="text" id="first_name" name="first_name"
+                   placeholder="Ada" autocomplete="given-name" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="last_name">Last name</label>
+            <input class="form-input" type="text" id="last_name" name="last_name"
+                   placeholder="Lovelace" autocomplete="family-name" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="username">Username</label>
+          <input class="form-input" type="text" id="username" name="username"
+                 placeholder="ada_lovelace" required autocomplete="username" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="email">Email address</label>
+          <input class="form-input" type="email" id="email" name="email"
+                 placeholder="you@example.com" required autocomplete="email" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <input class="form-input" type="password" id="password" name="password"
+                 placeholder="Min. 8 characters" required autocomplete="new-password" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password_confirm">Confirm password</label>
+          <input class="form-input" type="password" id="password_confirm" name="password_confirm"
+                 placeholder="Repeat password" required autocomplete="new-password" />
+        </div>
+
+        <div class="mt-2">
+          <button class="btn btn-primary btn-lg" type="submit" id="registerBtn">
+            <span class="btn-text">Create account</span>
+          </button>
+        </div>
+      </form>
+
+      <div class="divider">or</div>
+
+      <p class="text-center" style="font-size:0.9rem; color: var(--text-muted);">
+        Already have an account?
+        <a href="/login/">Sign in</a>
+      </p>
+    </div>
+  </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  if (API.isLoggedIn()) window.location.href = '/tasks/';
+
+  document.getElementById('registerForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const btn  = document.getElementById('registerBtn');
+
+    FormHelper.clearErrors(form);
+    FormHelper.setLoading(btn, true);
+
+    const payload = {
+      first_name:       form.first_name.value.trim(),
+      last_name:        form.last_name.value.trim(),
+      username:         form.username.value.trim(),
+      email:            form.email.value.trim(),
+      password:         form.password.value,
+      password_confirm: form.password_confirm.value,
+    };
+
+    try {
+      await API.auth.register(payload);
+      Toast.success('Account created! Redirecting…');
+      setTimeout(() => window.location.href = '/tasks/', 600);
+    } catch (err) {
+      FormHelper.showErrors(form, err.data || {});
+    } finally {
+      FormHelper.setLoading(btn, false);
+    }
+  });
+</script>
+{% endblock %}

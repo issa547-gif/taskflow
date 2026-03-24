@@ -1,0 +1,437 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — TaskFlow{% endblock %}
+
+{% block content %}
+<div class="app-layout">
+
+  <!-- ── Sidebar ─────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">Task<span>Flow</span></div>
+
+    <div class="sidebar-section-label">Views</div>
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-filter="" id="navAll">
+        <span class="nav-item-icon">◈</span> All Tasks
+        <span class="nav-item-badge" id="badgeAll">—</span>
+      </button>
+      <button class="nav-item" data-filter="status=todo" id="navTodo">
+        <span class="nav-item-icon">○</span> To Do
+        <span class="nav-item-badge" id="badgeTodo">—</span>
+      </button>
+      <button class="nav-item" data-filter="status=in_progress" id="navInProgress">
+        <span class="nav-item-icon">◑</span> In Progress
+        <span class="nav-item-badge" id="badgeInProgress">—</span>
+      </button>
+      <button class="nav-item" data-filter="status=done" id="navDone">
+        <span class="nav-item-icon">●</span> Done
+        <span class="nav-item-badge" id="badgeDone">—</span>
+      </button>
+      <button class="nav-item" data-filter="overdue=true" id="navOverdue">
+        <span class="nav-item-icon">⚠</span> Overdue
+        <span class="nav-item-badge" id="badgeOverdue">—</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-section-label">Priority</div>
+    <nav class="sidebar-nav">
+      <button class="nav-item" data-filter="priority=urgent">
+        <span class="nav-item-icon" style="color:var(--red)">▲</span> Urgent
+      </button>
+      <button class="nav-item" data-filter="priority=high">
+        <span class="nav-item-icon" style="color:var(--priority-high)">▲</span> High
+      </button>
+      <button class="nav-item" data-filter="priority=medium">
+        <span class="nav-item-icon" style="color:var(--amber)">▲</span> Medium
+      </button>
+      <button class="nav-item" data-filter="priority=low">
+        <span class="nav-item-icon" style="color:var(--green)">▲</span> Low
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="user-avatar" id="sidebarAvatar">—</div>
+        <div class="user-info">
+          <div class="user-name" id="sidebarName">Loading…</div>
+          <div class="user-email" id="sidebarEmail"></div>
+        </div>
+        <button class="btn btn-ghost btn-icon" onclick="API.auth.logout()" title="Sign out">⎋</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Main ───────────────────────────────── -->
+  <div class="main-content">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <h1 class="topbar-title" id="topbarTitle">All Tasks</h1>
+      <div class="topbar-actions">
+        <div class="search-input-wrap">
+          <span class="search-icon">⌕</span>
+          <input class="search-input" type="search" id="searchInput"
+                 placeholder="Search tasks…" autocomplete="off" />
+        </div>
+        <button class="btn btn-primary btn-sm" id="newTaskBtn">+ New Task</button>
+      </div>
+    </header>
+
+    <!-- Stats bar -->
+    <div class="stats-bar" id="statsBar">
+      <div class="stat-item"><div class="stat-value" id="statTotal">—</div><div class="stat-label">Total</div></div>
+      <div class="stat-item"><div class="stat-value" id="statInProgress">—</div><div class="stat-label">In Progress</div></div>
+      <div class="stat-item"><div class="stat-value" id="statDone">—</div><div class="stat-label">Done</div></div>
+      <div class="stat-item"><div class="stat-value" id="statOverdue" style="color:var(--red)">—</div><div class="stat-label">Overdue</div></div>
+      <div class="stat-item"><div class="stat-value" id="statHighPriority" style="color:var(--amber)">—</div><div class="stat-label">High Priority</div></div>
+    </div>
+
+    <!-- Task Area -->
+    <div class="task-area">
+      <div class="task-grid" id="taskGrid">
+        <!-- Tasks rendered here -->
+      </div>
+      <div class="empty-state" id="emptyState" style="display:none;">
+        <div class="empty-icon">✦</div>
+        <div class="empty-title">No tasks here</div>
+        <div class="empty-sub">Create a new task to get started.</div>
+        <button class="btn btn-primary btn-sm" onclick="openTaskModal()">+ New Task</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Task Modal ──────────────────────────── -->
+<div class="modal-overlay" id="taskModal" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title" id="modalTitle">New Task</h2>
+      <button class="btn btn-ghost btn-icon" id="modalClose" aria-label="Close">✕</button>
+    </div>
+
+    <form id="taskForm" novalidate>
+      <input type="hidden" id="taskId" />
+
+      <div class="form-group">
+        <label class="form-label" for="taskTitle">Title *</label>
+        <input class="form-input" type="text" id="taskTitle" name="title"
+               placeholder="What needs to be done?" required />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="taskDescription">Description</label>
+        <textarea class="form-textarea" id="taskDescription" name="description"
+                  placeholder="Add more detail…" rows="3"></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="taskPriority">Priority</label>
+          <select class="form-select" id="taskPriority" name="priority">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+            <option value="urgent">Urgent</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="taskStatus">Status</label>
+          <select class="form-select" id="taskStatus" name="status">
+            <option value="todo" selected>To Do</option>
+            <option value="in_progress">In Progress</option>
+            <option value="done">Done</option>
+            <option value="archived">Archived</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="taskDueDate">Due date</label>
+        <input class="form-input" type="date" id="taskDueDate" name="due_date" />
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="deleteTaskBtn"
+                style="display:none; margin-right:auto;" onclick="deleteCurrentTask()">
+          Delete
+        </button>
+        <button type="button" class="btn btn-secondary" id="modalCancelBtn">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="saveTaskBtn">
+          <span class="btn-text">Create Task</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ── Auth guard ──────────────────────────── */
+if (!requireAuth()) throw new Error('Not authenticated');
+
+/* ── State ───────────────────────────────── */
+let tasks        = [];
+let currentFilter = {};
+let searchQuery   = '';
+let editingTaskId = null;
+
+/* ── Bootstrap ───────────────────────────── */
+(async () => {
+  const user = API.getUser();
+  if (user) {
+    document.getElementById('sidebarName').textContent  = user.full_name || user.username;
+    document.getElementById('sidebarEmail').textContent = user.email;
+    document.getElementById('sidebarAvatar').textContent =
+      (user.first_name?.[0] || user.username?.[0] || '?').toUpperCase();
+  }
+
+  await Promise.all([loadStats(), loadTasks()]);
+})();
+
+/* ── Load stats ──────────────────────────── */
+async function loadStats() {
+  try {
+    const s = await API.tasks.stats();
+    document.getElementById('statTotal').textContent      = s.total;
+    document.getElementById('statInProgress').textContent = s.in_progress;
+    document.getElementById('statDone').textContent       = s.done;
+    document.getElementById('statOverdue').textContent    = s.overdue;
+    document.getElementById('statHighPriority').textContent = s.high_priority;
+
+    document.getElementById('badgeAll').textContent        = s.total;
+    document.getElementById('badgeTodo').textContent       = s.todo;
+    document.getElementById('badgeInProgress').textContent = s.in_progress;
+    document.getElementById('badgeDone').textContent       = s.done;
+    document.getElementById('badgeOverdue').textContent    = s.overdue;
+  } catch {}
+}
+
+/* ── Load tasks ──────────────────────────── */
+async function loadTasks() {
+  const params = { ...currentFilter };
+  if (searchQuery) params.search = searchQuery;
+
+  try {
+    const data = await API.tasks.list(params);
+    tasks = data.results || data;
+    renderTasks();
+  } catch (err) {
+    Toast.error('Failed to load tasks');
+  }
+}
+
+/* ── Render tasks ────────────────────────── */
+function renderTasks() {
+  const grid  = document.getElementById('taskGrid');
+  const empty = document.getElementById('emptyState');
+
+  if (!tasks.length) {
+    grid.innerHTML = '';
+    empty.style.display = 'flex';
+    return;
+  }
+  empty.style.display = 'none';
+  grid.innerHTML = tasks.map(taskCard).join('');
+}
+
+function taskCard(t) {
+  const priorityLabel = { low:'Low', medium:'Medium', high:'High', urgent:'Urgent' };
+  const statusLabel   = { todo:'To Do', in_progress:'In Progress', done:'Done', archived:'Archived' };
+
+  const overdueBadge = t.is_overdue
+    ? `<span class="badge badge-overdue">Overdue</span>` : '';
+
+  const dueDate = t.due_date
+    ? `<span class="due-date ${t.is_overdue ? 'overdue' : ''}">
+         ${formatDate(t.due_date)}
+       </span>`
+    : '';
+
+  return `
+  <div class="task-card ${t.is_pinned ? 'pinned' : ''} ${t.is_overdue ? 'overdue' : ''}"
+       data-id="${t.id}">
+    <div class="task-card-header">
+      <div class="task-title ${t.status === 'done' ? 'done' : ''}">${escHtml(t.title)}</div>
+      <div class="task-card-actions">
+        <button class="btn btn-ghost btn-icon btn-sm"
+                title="${t.is_pinned ? 'Unpin' : 'Pin'}"
+                onclick="pinTask(${t.id})">${t.is_pinned ? '★' : '☆'}</button>
+        <button class="btn btn-ghost btn-icon btn-sm"
+                title="Edit"
+                onclick="openTaskModal(${t.id})">✎</button>
+      </div>
+    </div>
+
+    ${t.description
+      ? `<p class="task-card-body">${escHtml(truncate(t.description, 100))}</p>`
+      : ''}
+
+    <div class="task-card-meta">
+      <div class="task-tags">
+        <span class="badge badge-priority-${t.priority}">${priorityLabel[t.priority]}</span>
+        <span class="badge badge-status-${t.status}">${statusLabel[t.status]}</span>
+        ${overdueBadge}
+      </div>
+      ${dueDate}
+    </div>
+  </div>`;
+}
+
+/* ── Open/close modal ────────────────────── */
+function openTaskModal(taskId = null) {
+  editingTaskId = taskId;
+  const modal     = document.getElementById('taskModal');
+  const form      = document.getElementById('taskForm');
+  const title     = document.getElementById('modalTitle');
+  const saveBtn   = document.getElementById('saveTaskBtn');
+  const deleteBtn = document.getElementById('deleteTaskBtn');
+
+  form.reset();
+  FormHelper.clearErrors(form);
+
+  if (taskId) {
+    const t = tasks.find(t => t.id === taskId);
+    if (!t) return;
+    title.textContent = 'Edit Task';
+    saveBtn.querySelector('.btn-text').textContent = 'Save Changes';
+    deleteBtn.style.display = 'inline-flex';
+
+    document.getElementById('taskId').value          = t.id;
+    document.getElementById('taskTitle').value       = t.title;
+    document.getElementById('taskDescription').value = t.description || '';
+    document.getElementById('taskPriority').value    = t.priority;
+    document.getElementById('taskStatus').value      = t.status;
+    document.getElementById('taskDueDate').value     = t.due_date || '';
+  } else {
+    title.textContent = 'New Task';
+    saveBtn.querySelector('.btn-text').textContent = 'Create Task';
+    deleteBtn.style.display = 'none';
+  }
+
+  modal.classList.add('open');
+  document.getElementById('taskTitle').focus();
+}
+
+function closeTaskModal() {
+  document.getElementById('taskModal').classList.remove('open');
+  editingTaskId = null;
+}
+
+document.getElementById('modalClose').addEventListener('click', closeTaskModal);
+document.getElementById('modalCancelBtn').addEventListener('click', closeTaskModal);
+document.getElementById('taskModal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('taskModal')) closeTaskModal();
+});
+
+/* ── Save task ───────────────────────────── */
+document.getElementById('taskForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('saveTaskBtn');
+  FormHelper.setLoading(btn, true);
+
+  const payload = {
+    title:       document.getElementById('taskTitle').value.trim(),
+    description: document.getElementById('taskDescription').value.trim(),
+    priority:    document.getElementById('taskPriority').value,
+    status:      document.getElementById('taskStatus').value,
+    due_date:    document.getElementById('taskDueDate').value || null,
+  };
+
+  try {
+    if (editingTaskId) {
+      await API.tasks.update(editingTaskId, payload);
+      Toast.success('Task updated');
+    } else {
+      await API.tasks.create(payload);
+      Toast.success('Task created');
+    }
+    closeTaskModal();
+    await Promise.all([loadTasks(), loadStats()]);
+  } catch (err) {
+    FormHelper.showErrors(document.getElementById('taskForm'), err.data || {});
+  } finally {
+    FormHelper.setLoading(btn, false);
+  }
+});
+
+/* ── Delete task ─────────────────────────── */
+async function deleteCurrentTask() {
+  if (!editingTaskId) return;
+  if (!confirm('Delete this task? This cannot be undone.')) return;
+  try {
+    await API.tasks.delete(editingTaskId);
+    Toast.success('Task deleted');
+    closeTaskModal();
+    await Promise.all([loadTasks(), loadStats()]);
+  } catch {
+    Toast.error('Failed to delete task');
+  }
+}
+
+/* ── Pin task ────────────────────────────── */
+async function pinTask(id) {
+  try {
+    const res = await API.tasks.togglePin(id);
+    Toast.info(res.message);
+    await loadTasks();
+  } catch {
+    Toast.error('Failed to update task');
+  }
+}
+
+/* ── Sidebar nav ─────────────────────────── */
+document.querySelectorAll('[data-filter]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-filter]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    const filter = btn.dataset.filter;
+    currentFilter = {};
+    if (filter) {
+      const [key, value] = filter.split('=');
+      if (key && value) currentFilter[key] = value;
+      else if (key === 'overdue') currentFilter.overdue = 'true';
+    }
+    document.getElementById('topbarTitle').textContent =
+      btn.textContent.replace(/[—\d]+$/, '').trim();
+    loadTasks();
+  });
+});
+
+/* ── Search ──────────────────────────────── */
+let searchTimer;
+document.getElementById('searchInput').addEventListener('input', (e) => {
+  searchQuery = e.target.value.trim();
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(loadTasks, 350);
+});
+
+/* ── New task button ─────────────────────── */
+document.getElementById('newTaskBtn').addEventListener('click', () => openTaskModal());
+
+/* ── Keyboard shortcut ───────────────────── */
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeTaskModal();
+  if ((e.key === 'n' || e.key === 'N') && !e.target.matches('input,textarea,select')) {
+    e.preventDefault();
+    openTaskModal();
+  }
+});
+
+/* ── Utilities ───────────────────────────── */
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function truncate(str, len) {
+  return str.length > len ? str.slice(0, len) + '…' : str;
+}
+
+function formatDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+</script>
+{% endblock %}
